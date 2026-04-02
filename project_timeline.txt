@@ -1,0 +1,178 @@
+================================================================================
+PROJECT CHRONOS - DETAILED 12-WEEK DEVELOPMENT TIMELINE & RETROSPECTIVE
+Group Status: Active Development Phase
+================================================================================
+
+--------------------------------------------------------------------------------
+WEEK 1: Ideation, Scope Definition, & Tech Stack Selection
+Dates: February 2, 2026 – February 8, 2026
+--------------------------------------------------------------------------------
+
+[ PART A: MEETING MINUTES ]
+Date: Feb 4, 2026
+Discussion: Brainstormed the core scope of our Cognitive Surveillance system. We needed to address the inefficiency of humans watching static CCTV feeds. We debated heavily whether to build the AI inside the browser (TensorFlow.js) or use a native backend. 
+Action Items: Decided to reject TensorFlow.js and rely on a strict Python backend for ML processing. Selected FastAPI for handling async traffic, and a React (Vite) frontend for telemetry state management.
+
+[ PART B: WEEKLY PROGRESS & IMPLEMENTATION ]
+What We Built: Bootstrapped the core project repository. Initialized the React (Vite) application and built the foundational FastAPI directory structure.
+Theoretical Challenge: There are hundreds of machine learning models for tracking. Choosing heavy multi-layered models would crash standard college laptops, while weak models look unimpressive.
+Execution Hurdles: Figuring out the initial tech stack was paralyzing. Realizing that running heavy matrix calculations inside Google Chrome via TensorFlow.js would lock up older laptops and prevent direct access to our laptop GPUs.
+Solutions: Abandoned the browser-AI approach completely. By isolating the AI to a Python backend, it allowed us to utilize YOLOv8 and DeepSORT for their perfect balance of speed, ensuring direct hardware-level access to the graphics cards.
+
+--------------------------------------------------------------------------------
+WEEK 2: Environment Setup, Virtual Environments, & Video Streaming
+Dates: February 9, 2026 – February 15, 2026
+--------------------------------------------------------------------------------
+
+[ PART A: MEETING MINUTES ]
+Date: Feb 11, 2026
+Discussion: Focused on standardizing the development environment across all group members' laptops to prevent code from breaking on different machines. Discussed the math required to stream video over HTTP properly.
+Action Items: Assigned members to formulate a unified `requirements.txt` and begin scripting the FastAPI video ingestor endpoints.
+
+[ PART B: WEEKLY PROGRESS & IMPLEMENTATION ]
+What We Built: We successfully wrote a native Python server to ingest `.mp4` CCTV footage and stream it dynamically to the React UI using MJPEG streaming boundaries.
+Theoretical Challenge: Testing video `while` loops causes the Python `cv2` engine to grind through an entire video file in just a few milliseconds instead of naturally playing over 30 seconds.
+Execution Hurdles: Total environment chaos within the group. Half the group had Python 3.10 and the other half had 3.12, causing bizarre dependency mismatch errors. We also constantly hit Windows security errors trying to boot our environments ("Activate.ps1 cannot be loaded").
+Solutions: We locked the group to a unified `requirements.txt` and globally reset Windows Execution Policies on our laptops. We solved the video looping crash by injecting mathematical `target_fps` sleeping (`asyncio.sleep(1/30)`), forcing the backend to gracefully yield CPU time and simulate cinematic 30 FPS playback.
+
+--------------------------------------------------------------------------------
+WEEK 3: Object Detection (The Eyes) & Hardware Acceleration 
+Dates: February 16, 2026 – February 22, 2026
+--------------------------------------------------------------------------------
+
+[ PART A: MEETING MINUTES ]
+Date: Feb 18, 2026
+Discussion: Evaluated the basic video streaming and planned the integration of our primary Computer Vision engine (YOLOv8) to isolate human targets.
+Action Items: Connect Ultralytics YOLOv8 into the processing loop. Troubleshoot why the video feed plummeted to 4 frames per second during early tests.
+
+[ PART B: WEEKLY PROGRESS & IMPLEMENTATION ]
+What We Built: Successfully extracted YOLO bounding boxes onto the video matrix, physically identifying shapes locally on the machine.
+Theoretical Challenge: YOLO was indiscriminately drawing boxes around everything. It was falsely identifying shadows, street reflections, and garbage cans as people, polluting our data stream.
+Execution Hurdles: Our YOLO deployment was accidentally running entirely on the CPU (about 4 FPS), acting like a slideshow. We spent nearly 3 days battling local PyTorch CUDA installation errors ("Attempting to deserialize object on a CUDA device but torch.cuda is False") because of mismatched PIP packages.
+Solutions: We uninstalled standard PIP `torch` packages and forced installations using the explicit `cu118` wheels, immediately boosting our feed to 60+ FPS. To solve the garbage detection, we deployed strict data sanitization: filtering exclusively for the 'person' target via `classes=[0]` and injecting a hard mathematical confidence cutoff (`conf=0.45`).
+
+--------------------------------------------------------------------------------
+WEEK 4: Deep Tracking & Kinematic Memory
+Dates: February 23, 2026 – March 1, 2026
+--------------------------------------------------------------------------------
+
+[ PART A: MEETING MINUTES ]
+Date: Feb 25, 2026
+Discussion: Addressed the "YOLO Amnesia" problem. YOLO detects people perfectly, but forgets who they are the exact millisecond a frame drops. Discussed tracking algorithms like ByteTrack vs. DeepSORT.
+Action Items: Integrate a permanent tracking engine to assign permanent numeric IDs to subjects to track their speed across the screen.
+
+[ PART B: WEEKLY PROGRESS & IMPLEMENTATION ]
+What We Built: Implemented persistent multi-frame tracking. We can now assign "Subject-1" to a person and track their physical speed and duration on screen.
+Theoretical Challenge: We needed to maintain permanent identity mapping for individuals across consecutive frames to effectively analyze behavior.
+Execution Hurdles: We initially experimented with ByteTrack because it is highly optimized and fast. However, we found that whenever group members walked past each other on camera (overlapping), ByteTrack completely panicked and swapped their tracking IDs.
+Solutions: We decisively deployed DeepSORT. DeepSORT takes slightly longer to process, but crucially, it extracts a 1280-dimension "Appearance Vector" (essentially learning the color pattern of the person's clothing). Because of this clothing memory, bounding boxes perfectly retained their IDs even through visual overlaps, enabling steady Speed and Loitering duration calculations.
+
+--------------------------------------------------------------------------------
+WEEK 5: The Action Recognition Engine (PyTorch)
+Dates: March 2, 2026 – March 8, 2026
+--------------------------------------------------------------------------------
+
+[ PART A: MEETING MINUTES ]
+Date: Mar 4, 2026
+Discussion: Decided that drawing bounding boxes isn't impressive enough for a final year project. We wanted the system to physically declare what humans are doing (Fighting, Running, Using Phone). 
+Action Items: Research Action Recognition frameworks. Task the group to figure out how to run another neural network simultaneously without lagging the primary video tracking loop.
+
+[ PART B: WEEKLY PROGRESS & IMPLEMENTATION ]
+What We Built: Engineered a background AI pipeline capable of explicitly reading body language through bounding box snippets.
+Theoretical Challenge: Running normal 3D Action Recognition models requires 50-200ms per person. Under normal conditions, processing 5 people sequentially blocked the main video loop, destroying the frontend framerate.
+Execution Hurdles: We originally attempted integrating `SlowFast` video-based models. These 4GB+ 3D models were so heavy that they crippled a group member's laptop, causing the stream to instantly crash and permanently lag out.
+Solutions: We completely overhauled the architecture to use an OpenAI "Zero-Shot" CLIP model. This lightweight 600MB model natively scores our custom text strings (`["Walking", "Fighting"]`) against the image locally. To solve the devastating video lag, we explicitly built an isolated Python `ThreadPoolExecutor`—the fast video loop seamlessly tosses bounding-box crops into an async queue while the PyTorch model computes the action safely in the background.
+
+--------------------------------------------------------------------------------
+WEEK 6: MID-SEM REVIEW (Milestone Defense)
+Dates: March 9, 2026 – March 15, 2026
+--------------------------------------------------------------------------------
+
+[ PART A: MEETING MINUTES (Pre/Post Defense) ]
+Date: Mar 11, 2026
+Discussion: Post-presentation debriefing. Group discussed the highly successful defense of the Detection & Action prototype, but focused heavily on the major critique leveled by the review panel regarding multi-camera persistency.
+Action Items: Pivot the entire project architecture away from single-video testing to building a Multi-Camera Matrix capable of bridging different video files together globally for the second half of the semester.
+
+[ PART B: WEEKLY PROGRESS & IMPLEMENTATION ]
+What We Built: We presented the fully functional, localized AI to the panel. We demonstrated the live bounding boxes actively updating PyTorch behavioral states (e.g., ACT: CARRYING BAG).
+Theoretical Challenge: Proving to the panel that the internal action logic worked flawlessly and natively over our own models, without relying strictly on faked post-processing.
+Execution Hurdles: The panel was deeply impressed with the async threading architecture, but they hit us with a massive criticism: "Identifying one camera is nice, but real security systems have dozens of cameras. How does your system remember the guy when he walks out the front door and reappears on the parking lot camera?"
+Solutions: We absorbed the feedback. By successfully demonstrating the PyTorch threading model, we cleared the Mid-Sem milestone. We then officially restructured our week 7 to 12 roadmap to construct an advanced Re-Identification (Re-ID) subsystem to solve their exact critique.
+
+--------------------------------------------------------------------------------
+WEEK 7: Persistent Multi-Camera Re-Identification (Re-ID)
+Dates: March 16, 2026 – March 22, 2026
+--------------------------------------------------------------------------------
+
+[ PART A: MEETING MINUTES ]
+Date: Mar 18, 2026
+Discussion: Spent the entire meeting figuring out how to build a global memory bank to solve the Mid-Sem Re-ID challenge. Evaluated several database technologies that could potentially handle DeepSORT's appearance tracking numbers.
+Action Items: Setup a permanent vector memory store to hold mathematical descriptions of subjects indefinitely.
+
+[ PART B: WEEKLY PROGRESS & IMPLEMENTATION ]
+What We Built: Created a completely global memory matrix. The system now perfectly remembers a subject if they leave Camera A and reappear on Camera B.
+Theoretical Challenge: DeepSORT automatically generates a brand-new ID (Subject-99) the specific moment a person completely leaves the screen boundaries, fundamentally breaking multi-camera continuity.
+Execution Hurdles: We initially attempted to save DeepSORT's Appearance Vectors into standard SQLite and MongoDB tables. We rapidly realized SQL databases geometrically cannot compare 1,280-dimension floating-point arrays for "visual similarity". 
+Solutions: We integrated a true AI tool called `ChromaDB` (a mathematical Vector Database) and engineered the `PersistentReID` class. Whenever DeepSORT finds a new person, their appearance tensor is embedded into ChromaDB forever. If they step onto any other camera feed, the system executes a mathematical "Cosine Similarity" vector search to instantly recall their original identity tag.
+
+--------------------------------------------------------------------------------
+WEEK 8: Vision LLMs & The Cognitive Layer
+Dates: March 23, 2026 – March 29, 2026
+--------------------------------------------------------------------------------
+
+[ PART A: MEETING MINUTES ]
+Date: Mar 25, 2026
+Discussion: Discussed how to generate smart, human-readable security reports. Agreed that manually hardcoding python math (`if speed > 100 then text = "Running Suspiciously"`) was clunky and didn't feel like true AI.
+Action Items: Figure out how to integrate a Large Language Model capable of looking at images and returning descriptive English text dynamically.
+
+[ PART B: WEEKLY PROGRESS & IMPLEMENTATION ]
+What We Built: Implemented an advanced Multi-Modal API to act as a "Digital Desk Guard" for high-severity anomalies.
+Theoretical Challenge: Encoding hundreds of nuanced suspicious visual scenarios manually across different environmental variables is effectively impossible for a college project depth.
+Execution Hurdles: We desperately wanted to use ChatGPT-4 Vision, but dealing with web scraping constraints and maintaining expensive OpenAI API billing accounts was totally unfeasible for our student group.
+Solutions: We utilized Google Gemini-3.1-Pro Vision due to its incredible multimodal contextual abilities. Now, the precise mathematical frame an anomaly is triggered (like loitering), the static image is securely passed to Gemini. Gemini outputs fluent English context automatically (e.g., "A subject in a yellow jacket is spotting running erratically"), replacing hardcoded math.
+
+--------------------------------------------------------------------------------
+WEEK 9 (CURRENT): UI Matrix, Server-Sent Events, & Telemetry
+Dates: March 30, 2026 – April 5, 2026
+--------------------------------------------------------------------------------
+
+[ PART A: MEETING MINUTES ]
+Date: Apr 1, 2026
+Discussion: With the backend AI stacked, we needed to dramatically polish the frontend to look and function like a production Cyber-Terminal. Discussed searchability inside the UI and fixing web crashes.
+Action Items: Build a semantic searching engine for events, and completely restructure how React communicates with FastAPI to stop browser freezing.
+
+[ PART B: WEEKLY PROGRESS & IMPLEMENTATION ]
+What We Built: A beautifully stylized, neon Glassmorphism dashboard featuring intelligent, timestamped event searchability and stable multi-camera grid uploading.
+Theoretical Challenge: The UI search bar historically couldn't process unstructured text events, and standard UI polling loops were disjointed.
+Execution Hurdles: Our React frontend was basically DDOS-ing our own server. Running 30 `fetch()` loop calculations a second was freezing the browser completely. Furthermore, our new Multi-Camera dashboard kept throwing `422 Unprocessable Entity - FORM DATA MISSING` exceptions because we didn't understand how `python-multipart` handles HTTP payloads.
+Solutions: We eliminated HTTP polling entirely by installing Server-Sent Events (SSE) to create a zero-refresh, invisible WebSocket-like tunnel, instantly curing the UI lag. We installed `python-multipart` to fix the API crashes. For the telemetry, we built an intense "Set Difference" tracker determining exactly who Entered, Left, or Changed Actions across all combined cameras. We hash these exact strings directly into the ChromaDB vector engine, enabling our Cyber-Dashboard to gracefully execute abstract queries like: "Who was sitting?"
+
+--------------------------------------------------------------------------------
+WEEK 10 (FUTURE PLAN): Heavy Stress Testing & Benchmarks
+Dates: April 6, 2026 – April 12, 2026
+--------------------------------------------------------------------------------
+
+[ PROJECTED GOALS & PLANNING ]
+Expected Work: Profiling exact memory execution limits and conducting benchmark load testing.
+Anticipated Problems: We suspect that wildly dense CCTV pedestrian crowds or heavily overlapping camera fields will confuse the DeepSORT tracking matrix. We also anticipate overloading the isolated PyTorch Thread Queue, potentially causing GPU memory buffers to overflow during 4x camera splitting.
+Proposed Solutions: We plan to implement aggressive fast-reject logic for unreadable tiny bounding boxes (<20x20 pixels). By purposely skipping garbage crops, we aim to instantly un-jam the threading queue and strictly enforce Python pipeline garbage collection.
+
+--------------------------------------------------------------------------------
+WEEK 11 (FUTURE PLAN): Refinements & Fallback Error Handling
+Dates: April 13, 2026 – April 19, 2026
+--------------------------------------------------------------------------------
+
+[ PROJECTED GOALS & PLANNING ]
+Expected Work: Finalizing the UI rendering edges, implementing network safety protocols, and formatting the comprehensive project report.
+Anticipated Problems: Dealing with silent network dropouts causing terminal logic cascades, and tuning UI styling glitches on laptops with different screen scale percentages. Unexpected internet dropouts could halt the Cognitive Gemini Layer mid-flight, destroying the Python async loop immediately.
+Proposed Solutions: We will strictly wrap `try/except BaseException` traceback paths over all external API boundaries. We will build distinct visual loading indicators ("Decrypting...", "WARNING: Downloading Weights") inside React, and gracefully fallback PyTorch failures explicitly to `[ACT: UNKNOWN]` to prevent the UI from freezing in confusion.
+
+--------------------------------------------------------------------------------
+WEEK 12 (FUTURE PLAN): Final Presentation & Defense
+Dates: April 20, 2026 – April 26, 2026
+--------------------------------------------------------------------------------
+
+[ PROJECTED GOALS & PLANNING ]
+Expected Work: Curating the final pitch script, delivering the presentation confidently, and officially freezing the codebase architecture.
+Anticipated Problems: Live demonstrations consistently fail due to Murphy's Law (e.g., trying to process the wrong file format on stage, or having incorrect folder mountings during the pitch). Furthermore, explaining highly technical AI concepts like 'Cosine Similarity' to review judges clearly and concisely without relying too heavily on jargon.
+Proposed Solutions: We will execute heavily rehearsed demonstration scenarios exclusively on strictly curated footage (`cctv_mall_angle.mp4` and `cctv_street_angle.mp4`). Our slide deck will explicitly highlight our transition toward Local PyTorch threading scalability, and structurally prove why our advanced Semantic Vector Searching solidly addresses the exact challenges posed to us during Week 6.

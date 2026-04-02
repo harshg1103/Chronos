@@ -1,0 +1,12 @@
+uvicorn[standard]
+fastapi
+streamlit
+opencv-python
+ultralytics
+deep-sort-realtime
+google-generativeai
+chromadb
+python-dotenv
+requests
+pillow
+numpy

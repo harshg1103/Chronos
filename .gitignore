@@ -1,0 +1,27 @@
+# Python Environment
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+
+# Data, DB, & Footage
+chroma_db/
+uploads/
+sample_videos/
+*.mp4
+*.avi
+*.mkv
+
+# AI Models & Weights
+*.pt
+yolov8n.pt
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+
+# OS Files
+.DS_Store
+Thumbs.db
