@@ -8,7 +8,18 @@ class ActionRecognizer:
         self.q = queue.Queue(maxsize=10)
         self.cached_actions = {}
         # Zero-Shot categories. Expandable.
-        self.labels = ["walking", "running", "standing", "using phone", "carrying bag", "fighting", "sitting", "stealing"]
+        self.label_map = {
+            "a photo of a person walking naturally": "WALKING",
+            "a photo of a person running or jogging": "RUNNING",
+            "a photo of a person standing still": "STANDING",
+            "a close-up photo of a person explicitly using a mobile phone": "USING PHONE",
+            "a photo of a person carrying a heavy bag or backpack": "CARRYING BAG",
+            "a photo of people physically fighting or punching": "FIGHTING",
+            "a photo of a person sitting down on a chair or bench": "SITTING",
+            "a photo of a person breaking in or stealing something": "STEALING",
+            "a blurry ambiguous photo of a person": "UNKNOWN"
+        }
+        self.labels = list(self.label_map.keys())
         
         self.thread = threading.Thread(target=self._worker, daemon=True)
         self.thread.start()
@@ -51,7 +62,10 @@ class ActionRecognizer:
                 
                 # The first label is the highest probability
                 best_label = result[0]['label']
-                self.cached_actions[track_id] = best_label.upper()
+                if best_label in self.label_map:
+                    self.cached_actions[track_id] = self.label_map[best_label]
+                else:
+                    self.cached_actions[track_id] = best_label.upper()
             except Exception as e:
                 import traceback
                 print(f"[Action Engine] Inference Exception: {e}")
