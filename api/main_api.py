@@ -68,7 +68,7 @@ async def video_processing_loop():
     trackers = [Tracker() for _ in range(len(caps))]
     analyzers = [BehaviorAnalyzer() for _ in range(len(caps))]
     
-    target_fps = 30
+    target_fps = 60
     delay = 1.0 / target_fps
     
     frame_counter = 0
@@ -76,7 +76,7 @@ async def video_processing_loop():
     while is_running:
         loop_start = time.time()
         frame_counter += 1
-        dispatch_actions = (frame_counter % 30 == 0)
+        dispatch_actions = (frame_counter % 15 == 0)
         
         current_frame_subjects = set()
         
@@ -197,10 +197,13 @@ async def video_processing_loop():
             
         if video_sources[0] != 0:
             elapsed = time.time() - loop_start
-            sleep_time = max(0.01, delay - elapsed)
-            await asyncio.sleep(sleep_time)
+            sleep_time = delay - elapsed
+            if sleep_time > 0:
+                await asyncio.sleep(sleep_time)
+            else:
+                await asyncio.sleep(0.001)
         else:
-            await asyncio.sleep(0.01)
+            await asyncio.sleep(0.001)
             
     for cap in caps:
         cap.release()
@@ -252,7 +255,7 @@ async def mjpeg_generator():
             continue
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + latest_frame_jpeg + b'\r\n')
-        await asyncio.sleep(0.03)
+        await asyncio.sleep(0.016)
 
 @app.get("/api/video_feed")
 async def video_feed():

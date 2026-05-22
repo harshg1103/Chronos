@@ -5,18 +5,22 @@ from PIL import Image
 
 class ActionRecognizer:
     def __init__(self):
-        self.q = queue.Queue(maxsize=10)
+        # Use LifoQueue so we analyze the most recent crop if there's a backlog
+        self.q = queue.LifoQueue(maxsize=30)
         self.cached_actions = {}
+        self.action_history = {}
         # Zero-Shot categories. Expandable.
         self.label_map = {
             "a photo of a person walking naturally": "WALKING",
             "a photo of a person running or jogging": "RUNNING",
             "a photo of a person standing still": "STANDING",
+            "a photo of a person loitering, browsing items, or looking around a store": "LOITERING",
             "a close-up photo of a person explicitly using a mobile phone": "USING PHONE",
             "a photo of a person carrying a heavy bag or backpack": "CARRYING BAG",
             "a photo of people physically fighting or punching": "FIGHTING",
             "a photo of a person sitting down on a chair or bench": "SITTING",
-            "a photo of a person breaking in or stealing something": "STEALING",
+            "a photo of a person reaching for an item on a store shelf": "REACHING",
+            "a photo of a person secretly stealing, shoplifting, and putting an item into their pocket or jacket": "SHOPLIFTING",
             "a blurry ambiguous photo of a person": "UNKNOWN"
         }
         self.labels = list(self.label_map.keys())
@@ -63,9 +67,21 @@ class ActionRecognizer:
                 # The first label is the highest probability
                 best_label = result[0]['label']
                 if best_label in self.label_map:
-                    self.cached_actions[track_id] = self.label_map[best_label]
+                    mapped_label = self.label_map[best_label]
                 else:
-                    self.cached_actions[track_id] = best_label.upper()
+                    mapped_label = best_label.upper()
+                    
+                # Temporal Logic Override: Cannot be shoplifting unless previously loitering or reaching
+                if mapped_label == "SHOPLIFTING":
+                    history = self.action_history.get(track_id, set())
+                    if "LOITERING" not in history and "REACHING" not in history:
+                        mapped_label = "LOITERING"
+                        
+                self.cached_actions[track_id] = mapped_label
+                
+                if track_id not in self.action_history:
+                    self.action_history[track_id] = set()
+                self.action_history[track_id].add(mapped_label)
             except Exception as e:
                 import traceback
                 print(f"[Action Engine] Inference Exception: {e}")
