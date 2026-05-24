@@ -33,12 +33,18 @@ class ActionRecognizer:
             from transformers import pipeline
             import torch
             device = 0 if torch.cuda.is_available() else -1
-            print(f"[Action Engine] Loading HuggingFace CLIP Zero-Shot on Device: {device}")
+            dtype = torch.float16 if torch.cuda.is_available() else torch.float32
+            print(f"[Action Engine] Loading HuggingFace CLIP Zero-Shot on Device: {device} | Precision: {dtype}")
             print("[Action Engine] WARNING: If this is the first run, the CLIP model (~600MB) is downloading silently! Please wait...")
             
             # Using openai/clip-vit-base-patch32 for zero-shot image classification
-            self.classifier = pipeline("zero-shot-image-classification", model="openai/clip-vit-base-patch32", device=device)
-            print("[Action Engine] Model loaded perfectly. Awaiting crops...")
+            self.classifier = pipeline(
+                "zero-shot-image-classification", 
+                model="openai/clip-vit-base-patch32", 
+                device=device,
+                torch_dtype=dtype
+            )
+            print("[Action Engine] Model loaded perfectly on GPU. Awaiting crops...")
         except BaseException as e:
             import traceback
             print(f"[Action Engine] Failed to load PyTorch: {e}")
